@@ -6,9 +6,7 @@ on:
     branches:
       - main
   schedule:
-    # Adjust refresh schedule here. By default, it runs once per day.
-    # Syntax reference: https://docs.github.com/en/actions/reference/events-that-trigger-workflows#schedule
-    # Recommended tool: https://crontab.guru/
+    # 调整更新时间，默认每天运行一次。
     - cron: "12 5 * * *"
 
 jobs:
@@ -16,10 +14,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      # Step 1: 检出仓库
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_TOKEN }}  # 使用 GH_TOKEN 进行身份验证
+
+      # Step 2: 下载并解压 ArxivFeed
       - name: Download ArxivFeed
         env:
-          GITHUB_PAT: ${{ github.token }}
+          GITHUB_PAT: ${{ secrets.GH_TOKEN }}  # 使用 GitHub Token 进行身份验证
           REPO: "NotCraft/ArxivFeed"
           VERSION: "latest"
           MATCH: "arxivfeed-.+-x86_64-unknown-linux-musl.tar.gz$"
@@ -39,11 +43,15 @@ jobs:
               "$(cat asset.url)"
           tar -zxvf arxivfeed.tgz --strip-components 1 $(tar tf arxivfeed.tgz | grep /arxivfeed)
           chmod +x arxivfeed
+
+      # Step 3: 运行 ArxivFeed 构建 RSS
       - name: Build rss
         run: ./arxivfeed
+
+      # Step 4: 部署到 GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target
-          force_orphan: true
+          github_token: ${{ secrets.GH_TOKEN }}  # 使用 GH_TOKEN 进行身份验证
+          publish_dir: ./target  # 设置要发布的目录
+          force_orphan: true  # 强制使用孤立分支（避免影响已有分支）
